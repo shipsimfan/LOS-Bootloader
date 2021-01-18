@@ -8,15 +8,20 @@ BOOTLOADER := $(BIN_DIR)/BOOTX64.EFI
 
 # SOURCE FILES
 C_SRC_FILES := $(shell find $(SRC_DIR) -name '*.c')
+ASM_SRC_FILES := $(shell find $(SRC_DIR) -name '*.asm')
 
 LINK_FILE := ./elf_x86_64_efi.lds
 
 # OBJECT FILES
 C_OBJ_FILES := $(C_SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+ASM_OBJ_FILES := $(ASM_SRC_FILES:$(SRC_DIR)/%.asm=$(OBJ_DIR)/%.o)
 
 # PROGRAMS
 CC := x86_64-w64-mingw32-gcc
 CC_FLAGS := -ffreestanding -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c -g
+
+ASM := nasm
+ASM_FLAGS := -f win64 -g
 
 LD := x86_64-w64-mingw32-gcc
 LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g
@@ -32,11 +37,15 @@ clean:
 # COMPILATION RULES
 .SECONDEXPANSION:
 
-$(BOOTLOADER): $(C_OBJ_FILES)
+$(BOOTLOADER): $(ASM_OBJ_FILES) $(C_OBJ_FILES)
 	$(LD) $(LD_FLAGS) -o $@ $^ $(LD_POST_FLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $$(@D)/.
 	$(CC) $(CC_FLAGS) -o $@ $^
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm | $$(@D)/.
+	$(ASM) $(ASM_FLAGS) -o $@ $^
+
 
 # DIRECTORY RULES
 $(OBJ_DIR)/.:

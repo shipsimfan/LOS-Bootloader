@@ -1,3 +1,5 @@
+#pragma once
+
 // Defines
 #define ET_NONE 0
 #define ET_REL 1
@@ -90,3 +92,8 @@ typedef struct {
 } Elf64_Phdr;
 
 #pragma pack(pop)
+
+// Functions
+int VerifyELFHeader(Elf64_Ehdr* hdr, unsigned char class, unsigned char data, Elf64_Half type, Elf64_Half machine);
+
+int LoadELFExecutable(Elf64_Ehdr* hdr);
