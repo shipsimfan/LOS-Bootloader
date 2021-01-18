@@ -1,30 +1,51 @@
 #include <elf.h>
 #include <file.h>
-#include <paging.h>
 #include <video.h>
 
 EFI_SYSTEM_TABLE* ST;
 
-typedef void (*KernelStartFunc)(uint64_t, uint64_t) __attribute__((sysv_abi));
+#pragma pack(push)
+#pragma pack(1)
 
 typedef struct {
-    UINTN size;
-    UINTN key;
-    UINTN descSize;
-    UINT32 descVersion;
-    VOID* map;
-} MemoryMap;
+    uint64_t size;
+    uint64_t key;
+    uint64_t descSize;
+    uint32_t descVersion;
+    uint32_t reserved;
+    uint64_t mapAddr;
+} MemoryMap_t;
 
-EFI_STATUS GetMemoryMap(MemoryMap* map) {
-    EFI_STATUS status = ST->BootServices->GetMemoryMap(&(map->size), map->map, &(map->key), &(map->descSize), &(map->descVersion));
+typedef struct {
+    uint32_t horizontalResolution;
+    uint32_t verticalResolution;
+    uint32_t pixelFormat;
+    uint32_t redMask;
+    uint32_t greenMask;
+    uint32_t blueMask;
+    uint32_t reserved;
+    uint32_t pixelsPerScanline;
+    uint64_t frameBufferBase;
+    uint64_t frameBufferSize;
+} GraphicsMode_t;
+
+#pragma pack(pop)
+
+typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*) __attribute__((sysv_abi));
+
+MemoryMap_t mmap;
+GraphicsMode_t gmode;
+
+EFI_STATUS GetMemoryMap(MemoryMap_t* map) {
+    EFI_STATUS status = ST->BootServices->GetMemoryMap(&(map->size), (EFI_MEMORY_DESCRIPTOR*)map->mapAddr, &(map->key), &(map->descSize), &(map->descVersion));
     if (EFI_ERROR(status) && status != EFI_BUFFER_TOO_SMALL)
         return status;
 
-    status = ST->BootServices->AllocatePool(EfiLoaderData, map->size, &(map->map));
+    status = ST->BootServices->AllocatePool(EfiLoaderData, map->size, (void**)&(map->mapAddr));
     if (EFI_ERROR(status))
         return status;
 
-    return status = ST->BootServices->GetMemoryMap(&(map->size), map->map, &(map->key), &(map->descSize), &(map->descVersion));
+    return status = ST->BootServices->GetMemoryMap(&(map->size), (EFI_MEMORY_DESCRIPTOR*)map->mapAddr, &(map->key), &(map->descSize), &(map->descVersion));
 }
 
 EFI_STATUS LoadKernel(EFI_HANDLE imageHandle, void** kernelFile, UINTN* kernelFileSize) {
@@ -101,12 +122,18 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     } else
         Print(L"OK\r\n");
 
-    // Prepare paging
-    PreparePaging();
+    gmode.horizontalResolution = mode->Info->HorizontalResolution;
+    gmode.verticalResolution = mode->Info->VerticalResolution;
+    gmode.pixelFormat = mode->Info->PixelFormat;
+    gmode.redMask = mode->Info->PixelInformation.RedMask;
+    gmode.blueMask = mode->Info->PixelInformation.BlueMask;
+    gmode.greenMask = mode->Info->PixelInformation.GreenMask;
+    gmode.pixelsPerScanline = mode->Info->PixelsPerScanLine;
+    gmode.frameBufferBase = mode->FrameBufferBase;
+    gmode.frameBufferSize = mode->FrameBufferSize;
 
     // Get the memory map
     Print(L"Getting the memory map . . . ");
-    MemoryMap mmap;
     status = GetMemoryMap(&mmap);
     if (EFI_ERROR(status)) {
         Print(L"Unable to get memory map\r\n");
@@ -118,9 +145,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
 
     ST->BootServices->ExitBootServices(imageHandle, mmap.key);
 
-    // EnablePaging(); //TODO: Get paging working
-
-    kernelStart(mode->FrameBufferBase, mode->FrameBufferSize);
+    kernelStart(&mmap, &gmode);
 
     while (1)
         ;
