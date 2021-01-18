@@ -16,10 +16,10 @@ C_OBJ_FILES := $(C_SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # PROGRAMS
 CC := x86_64-w64-mingw32-gcc
-CC_FLAGS := -ffreestanding -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c
+CC_FLAGS := -ffreestanding -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c -g
 
 LD := x86_64-w64-mingw32-gcc
-LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
+LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g
 LD_POST_FLAGS :=
 
 # BASE RULES
