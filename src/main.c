@@ -31,7 +31,7 @@ typedef struct {
 
 #pragma pack(pop)
 
-typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*) __attribute__((sysv_abi));
+typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*, void*) __attribute__((sysv_abi));
 
 MemoryMap_t mmap;
 GraphicsMode_t gmode;
@@ -82,7 +82,20 @@ EFI_STATUS LoadKernel(EFI_HANDLE imageHandle, void** kernelFile, UINTN* kernelFi
     return Close(kernelHandle);
 }
 
-EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
+int MemoryCompare(const void* str1, const void* str2, uint64_t count) {
+    register const unsigned char* s1 = (const unsigned char*)str1;
+    register const unsigned char* s2 = (const unsigned char*)str2;
+
+    while (count-- > 0) {
+        if (*s1++ != *s2++)
+            return s1[-1] < s2[-1] ? -1 : 1;
+    }
+
+    return 0;
+}
+
+EFI_STATUS
+efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     // Save the system table
     ST = systemTable;
 
@@ -132,6 +145,22 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     gmode.frameBufferBase = mode->FrameBufferBase;
     gmode.frameBufferSize = mode->FrameBufferSize;
 
+    // Get ACPI location
+    EFI_GUID acpi20GUID = {0x8868e871, 0xe4f1, 0x11d3, {0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81}};
+    EFI_CONFIGURATION_TABLE* ect = ST->ConfigurationTable;
+    void* rdsp = NULL;
+    for (int i = 0; i < ST->NumberOfTableEntries; i++) {
+        if (MemoryCompare(&ect->VendorGuid, &acpi20GUID, sizeof(acpi20GUID))) {
+            rdsp = ect->VendorTable;
+            break;
+        }
+    }
+
+    if (rdsp == NULL) {
+        Print(L"Unable to find ACPI 2.0 table\r\n");
+        return -1;
+    }
+
     // Get the memory map
     Print(L"Getting the memory map . . . ");
     status = GetMemoryMap(&mmap);
@@ -145,7 +174,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
 
     ST->BootServices->ExitBootServices(imageHandle, mmap.key);
 
-    kernelStart(&mmap, &gmode);
+    kernelStart(&mmap, &gmode, rdsp);
 
     while (1)
         ;
