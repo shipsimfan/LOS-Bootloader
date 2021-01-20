@@ -150,15 +150,22 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     EFI_CONFIGURATION_TABLE* ect = ST->ConfigurationTable;
     void* rdsp = NULL;
     for (int i = 0; i < ST->NumberOfTableEntries; i++) {
-        if (MemoryCompare(&ect->VendorGuid, &acpi20GUID, sizeof(acpi20GUID))) {
+        Print(L"Vendor Table: ");
+        PrintHex((UINT64)ect->VendorTable);
+        Print(L"\r\n");
+        if (MemoryCompare(&ect->VendorGuid, &acpi20GUID, sizeof(acpi20GUID)) == 0)
             rdsp = ect->VendorTable;
-            break;
-        }
+
+        ect++;
     }
 
     if (rdsp == NULL) {
         Print(L"Unable to find ACPI 2.0 table\r\n");
         return -1;
+    } else {
+        Print(L"Acpi 2.0 table located at ");
+        PrintHex((UINT64)rdsp);
+        Print(L"\r\n");
     }
 
     // Get the memory map
@@ -170,7 +177,23 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     } else
         Print(L"OK\r\n");
 
-    Print(L"Exiting boot services . . .");
+    status = ST->ConIn->Reset(ST->ConIn, FALSE);
+    if (EFI_ERROR(status)) {
+        Print(L"Failed to clear input buffer!\r\n");
+        return status;
+    }
+
+    Print(L"Press any key to exit boot services: ");
+    EFI_INPUT_KEY key;
+    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY)
+        ;
+
+    if (EFI_ERROR(status)) {
+        Print(L"Error reading key!\r\n");
+        return status;
+    }
+
+    Print(L"\r\nExiting boot services . . . \r\n");
 
     ST->BootServices->ExitBootServices(imageHandle, mmap.key);
 
