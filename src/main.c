@@ -183,7 +183,7 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
         return status;
     }
 
-    Print(L"Press any key to exit boot services: ");
+    /*Print(L"Press any key to exit boot services: ");
     EFI_INPUT_KEY key;
     while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY)
         ;
@@ -191,7 +191,7 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     if (EFI_ERROR(status)) {
         Print(L"Error reading key!\r\n");
         return status;
-    }
+    }*/
 
     Print(L"\r\nExiting boot services . . . \r\n");
 
