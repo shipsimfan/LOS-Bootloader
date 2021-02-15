@@ -48,12 +48,12 @@ int LoadELFExecutable(Elf64_Ehdr* hdr) {
     Elf64_Phdr* phdr = (Elf64_Phdr*)((Elf64_Off)hdr + hdr->e_phoff);
     for (int i = 0; i < hdr->e_phnum; i++, phdr = (Elf64_Phdr*)((Elf64_Xword)phdr + hdr->e_phentsize)) {
         if (phdr->p_type == PT_LOAD) {
-            status = ST->BootServices->AllocatePages(AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES(phdr->p_memsz), (EFI_PHYSICAL_ADDRESS*)phdr->p_vaddr);
+            status = ST->BootServices->AllocatePages(AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES(phdr->p_memsz), (EFI_PHYSICAL_ADDRESS*)phdr->p_paddr);
             if (EFI_ERROR(status))
                 return -1;
 
             if (phdr->p_filesz > 0)
-                ST->BootServices->CopyMem((void*)phdr->p_vaddr, (void*)((Elf64_Xword)hdr + phdr->p_offset), phdr->p_filesz);
+                ST->BootServices->CopyMem((void*)phdr->p_paddr, (void*)((Elf64_Xword)hdr + phdr->p_offset), phdr->p_filesz);
         }
     }
 }
