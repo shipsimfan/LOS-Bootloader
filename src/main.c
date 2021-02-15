@@ -33,6 +33,8 @@ typedef struct {
 
 typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*, void*) __attribute__((sysv_abi));
 
+extern void kstart(MemoryMap_t*, GraphicsMode_t*, void*, KernelStartFunc) __attribute__((sysv_abi));
+
 MemoryMap_t mmap;
 GraphicsMode_t gmode;
 
@@ -197,7 +199,7 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
 
     ST->BootServices->ExitBootServices(imageHandle, mmap.key);
 
-    kernelStart(&mmap, &gmode, rdsp);
+    kstart(&mmap, &gmode, rdsp, kernelStart);
 
     while (1)
         ;
