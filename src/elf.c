@@ -52,6 +52,11 @@ int LoadELFExecutable(Elf64_Ehdr* hdr) {
 
             if (phdr->p_filesz > 0)
                 ST->BootServices->CopyMem((void*)phdr->p_paddr, (void*)((Elf64_Xword)hdr + phdr->p_offset), phdr->p_filesz);
+
+            Elf64_Xword diff = phdr->p_memsz - phdr->p_filesz;
+            uint8_t* start = (uint8_t*)(phdr->p_paddr + phdr->p_filesz);
+            for (Elf64_Xword i = 0; i < diff; i++)
+                start[i] = 0;
         }
     }
 }
