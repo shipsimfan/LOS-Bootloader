@@ -31,7 +31,7 @@ typedef struct {
 
 #pragma pack(pop)
 
-typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*, void*) __attribute__((sysv_abi));
+typedef void (*KernelStartFunc)(MemoryMap_t*, GraphicsMode_t*, void*, uint64_t ctorsAddr, uint64_t ctorsSize) __attribute__((sysv_abi));
 
 MemoryMap_t mmap;
 GraphicsMode_t gmode;
@@ -82,6 +82,12 @@ EFI_STATUS LoadKernel(EFI_HANDLE imageHandle, void** kernelFile, UINTN* kernelFi
     return Close(kernelHandle);
 }
 
+int StringCompare(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2))
+        s1++, s2++;
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+
 int MemoryCompare(const void* str1, const void* str2, uint64_t count) {
     register const unsigned char* s1 = (const unsigned char*)str1;
     register const unsigned char* s2 = (const unsigned char*)str2;
@@ -118,6 +124,31 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
         return s;
     } else
         Print(L"OK\r\n");
+
+    // Locate the string table
+    Elf64_Shdr* stringTableHdr = (Elf64_Shdr*)((uint64_t)kernelHeader + kernelHeader->e_shoff + (kernelHeader->e_shstrndx * kernelHeader->e_shentsize));
+    uint64_t stringTable = (uint64_t)kernelHeader + stringTableHdr->sh_offset;
+
+    // Save constructors and destructors
+    Elf64_Shdr* shdr;
+    uint64_t ctorsAddr = 0;
+    uint64_t ctorsSize = 0;
+    for (int i = 0; i < kernelHeader->e_shnum; i++) {
+        shdr = (Elf64_Shdr*)((uint64_t)kernelHeader + kernelHeader->e_shoff + (i * kernelHeader->e_shentsize));
+
+        if (StringCompare((const char*)(stringTable + shdr->sh_name), ".ctors") == 0) {
+            ctorsAddr = shdr->sh_addr;
+            ctorsSize = shdr->sh_size;
+        }
+    }
+
+    if (ctorsAddr > 0) {
+        Print(L".ctors found: ");
+        PrintHex(ctorsAddr);
+        Print(L" sized ");
+        PrintHex(ctorsSize);
+        Print(L"\r\n");
+    }
 
     // Save the entry point
     KernelStartFunc kernelStart = (KernelStartFunc)kernelHeader->e_entry;
@@ -197,7 +228,7 @@ efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
 
     ST->BootServices->ExitBootServices(imageHandle, mmap.key);
 
-    kernelStart(&mmap, &gmode, rdsp);
+    kernelStart(&mmap, &gmode, rdsp, ctorsAddr, ctorsSize);
 
     while (1)
         ;
