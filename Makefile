@@ -29,22 +29,27 @@ LD_POST_FLAGS :=
 
 # BASE RULES
 all: dirs $(BOOTLOADER)
+	@echo "[ BOOTLOADER ] Build Complete!"
 
 clean:
-	rm -rf $(OBJ_DIR)/*
-	rm -rf $(BIN_DIR)/*
+	@rm -rf $(OBJ_DIR)/*
+	@rm -rf $(BIN_DIR)/*
+	@echo "[ BOOTLOADER ] Cleaned!"
 
 # COMPILATION RULES
 .SECONDEXPANSION:
 
 $(BOOTLOADER): $(ASM_OBJ_FILES) $(C_OBJ_FILES)
-	$(LD) $(LD_FLAGS) -o $@ $^ $(LD_POST_FLAGS)
+	@echo "[ BOOTLOADER ] (LD) $@ . . ."
+	@$(LD) $(LD_FLAGS) -o $@ $^ $(LD_POST_FLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $$(@D)/.
-	$(CC) $(CC_FLAGS) -o $@ $^
+	@echo "[ BOOTLOADER ] (CC) $@ . . ."
+	@$(CC) $(CC_FLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm | $$(@D)/.
-	$(ASM) $(ASM_FLAGS) -o $@ $^
+	@echo "[ BOOTLOADER ] (ASM) $@ . . ."
+	@$(ASM) $(ASM_FLAGS) -o $@ $^
 
 
 # DIRECTORY RULES
