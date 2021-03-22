@@ -1,8 +1,10 @@
 #pragma once
 
 #include <efi.h>
+#include <stdarg.h>
 
-int Print(CHAR16* str);
-int PrintHex(UINT64 val);
+void printf(const CHAR16* format, ...);
+void vprintf(const CHAR16* format, va_list arg);
 
-EFI_STATUS GetCurrentVideoModeInfo(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE** info);
+void eprintf(const CHAR16* format, ...);
+void evprintf(const CHAR16* format, va_list arg);
