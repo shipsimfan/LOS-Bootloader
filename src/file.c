@@ -34,7 +34,7 @@ EFI_STATUS Open(const CHAR16* name, EFI_FILE_HANDLE* fileHandle) { return bootVo
 EFI_STATUS Close(EFI_FILE_HANDLE handle) { return handle->Close(handle); }
 
 BOOLEAN GrowBuffer(EFI_STATUS* status, VOID** buffer, UINTN bufferSize) {
-    if (!buffer && bufferSize)
+    if (!*buffer && bufferSize)
         *status = EFI_BUFFER_TOO_SMALL;
 
     BOOLEAN tryAgain = FALSE;
@@ -62,15 +62,18 @@ EFI_STATUS Read(EFI_FILE_HANDLE handle, void** buffer, UINTN* size) {
     EFI_STATUS status = EFI_SUCCESS;
     EFI_FILE_INFO* fileInfo = NULL;
     UINTN fileInfoSize = sizeof(EFI_FILE_INFO) + 200;
+    EFI_GUID genericFileInfo = EFI_FILE_INFO_ID;
 
     while (GrowBuffer(&status, (VOID**)&fileInfo, fileInfoSize))
-        status = handle->GetInfo(handle, &GENERIC_FILE_GUID, &fileInfoSize, fileInfo);
+        status = handle->GetInfo(handle, &genericFileInfo, &fileInfoSize, fileInfo);
 
     status = SYSTEM_TABLE->BootServices->AllocatePool(allocationType, fileInfo->FileSize, buffer);
     if (EFI_ERROR(status))
         return status;
 
-    return handle->Read(handle, &fileInfo->FileSize, *buffer);
+    *size = fileInfo->FileSize;
+
+    return handle->Read(handle, size, *buffer);
 }
 
 EFI_STATUS LoadFile(const CHAR16* name, void** buffer, UINTN* size) {

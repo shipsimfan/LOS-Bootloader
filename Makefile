@@ -3,33 +3,34 @@ BIN_DIR := ./bin
 OBJ_DIR := ./obj
 SRC_DIR := ./src
 
+SYSROOT_DIR := ../sysroot
+
 # TARGET
 BOOTLOADER := $(BIN_DIR)/BOOTX64.EFI
 
 # SOURCE FILES
 C_SRC_FILES := $(shell find $(SRC_DIR) -name '*.c')
-ASM_SRC_FILES := $(shell find $(SRC_DIR) -name '*.asm')
 
 LINK_FILE := ./elf_x86_64_efi.lds
 
 # OBJECT FILES
 C_OBJ_FILES := $(C_SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-ASM_OBJ_FILES := $(ASM_SRC_FILES:$(SRC_DIR)/%.asm=$(OBJ_DIR)/%.o)
 
 # PROGRAMS
 CC := x86_64-w64-mingw32-gcc
 CC_FLAGS := -ffreestanding -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c -g
 
-ASM := nasm
-ASM_FLAGS := -f win64 -g
-
 LD := x86_64-w64-mingw32-gcc
 LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g
-LD_POST_FLAGS :=
 
 # BASE RULES
 all: dirs $(BOOTLOADER)
 	@echo "[ BOOTLOADER ] Build Complete!"
+
+install: all
+	@mkdir -p $(SYSROOT_DIR)/EFI/BOOT
+	@cp $(BOOTLOADER) $(SYSROOT_DIR)/EFI/BOOT
+	@echo "[ BOOTLOADER ] Installed!"
 
 clean:
 	@rm -rf $(OBJ_DIR)/*
@@ -41,15 +42,11 @@ clean:
 
 $(BOOTLOADER): $(ASM_OBJ_FILES) $(C_OBJ_FILES)
 	@echo "[ BOOTLOADER ] (LD) $@ . . ."
-	@$(LD) $(LD_FLAGS) -o $@ $^ $(LD_POST_FLAGS)
+	@$(LD) $(LD_FLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $$(@D)/.
 	@echo "[ BOOTLOADER ] (CC) $@ . . ."
 	@$(CC) $(CC_FLAGS) -o $@ $^
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm | $$(@D)/.
-	@echo "[ BOOTLOADER ] (ASM) $@ . . ."
-	@$(ASM) $(ASM_FLAGS) -o $@ $^
 
 
 # DIRECTORY RULES
