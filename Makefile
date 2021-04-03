@@ -41,11 +41,11 @@ clean:
 .SECONDEXPANSION:
 
 $(BOOTLOADER): $(ASM_OBJ_FILES) $(C_OBJ_FILES)
-	@echo "[ BOOTLOADER ] (LD) $@ . . ."
+	@echo "[ BOOTLOADER ] Linking $@ . . ."
 	@$(LD) $(LD_FLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $$(@D)/.
-	@echo "[ BOOTLOADER ] (CC) $@ . . ."
+	@echo "[ BOOTLOADER ] Compiling $@ . . ."
 	@$(CC) $(CC_FLAGS) -o $@ $^
 
 
