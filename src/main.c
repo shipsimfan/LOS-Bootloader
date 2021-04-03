@@ -2,6 +2,7 @@
 #include <elf.h>
 #include <error.h>
 #include <file.h>
+#include <memory.h>
 #include <systemTable.h>
 #include <video.h>
 
@@ -10,8 +11,9 @@
     Println(L"OK");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     SetColor(EFI_LIGHTGRAY);
 
-typedef void (*KernelEntry)(GraphicsMode* graphicsInfo) __attribute__((sysv_abi));
+typedef void (*KernelEntry)(GraphicsMode* graphicsInfo, MemoryMap* memoryMap) __attribute__((sysv_abi));
 GraphicsMode graphicsMode;
+MemoryMap memoryMap;
 
 EFI_SYSTEM_TABLE* SYSTEM_TABLE;
 EFI_HANDLE IMAGE_HANDLE;
@@ -50,10 +52,18 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
         FatalError(L"\r\nFailed to get video mode information: %s", StatusString(status));
     PRINT_OK();
 
+    // Get the memory info
+    Print(L"Getting memory map . . . ");
+    status = GetMemoryMap(&memoryMap);
+    if (EFI_ERROR(status))
+        FatalError(L"\r\nFailed to get memory map: %s", StatusString(status));
+    PRINT_OK();
+
     // Exit boot services and launch the kernel
     Println(L"Launching the kernel . . .");
+    systemTable->BootServices->ExitBootServices(imageHandle, memoryMap.key);
 
-    entry(&graphicsMode);
+    entry(&graphicsMode, &memoryMap);
 
     while (1)
         asm volatile("hlt");
