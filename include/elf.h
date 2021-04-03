@@ -1,5 +1,6 @@
 #pragma once
 
+#include <efi.h>
 #include <stdint.h>
 
 // Defines
@@ -109,4 +110,4 @@ typedef struct {
 #pragma pack(pop)
 
 // Functions
-uint64_t LoadELFExecutable(void* file);
+EFI_STATUS LoadELFExecutable(void* file, UINT64* entry);

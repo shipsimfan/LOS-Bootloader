@@ -1,7 +1,13 @@
+#include <console.h>
 #include <elf.h>
+#include <error.h>
 #include <file.h>
 #include <systemTable.h>
-#include <video.h>
+
+#define PRINT_OK()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
+    SetColor(EFI_GREEN);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
+    Println(L"OK");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
+    SetColor(EFI_LIGHTGRAY);
 
 typedef void (*KernelEntry)();
 
@@ -19,28 +25,24 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     // Clear the screen
     systemTable->ConOut->ClearScreen(systemTable->ConOut);
 
-    printf(L"Loading the kernel . . .\r\n");
-
     // Load the kernel
+    Print(L"Loading the kernel . . . ");
     void* kernel = NULL;
     UINTN kernelSize = 0;
     EFI_STATUS status = LoadFile(L"kernel.elf", &kernel, &kernelSize);
-    if (EFI_ERROR(status)) {
-        eprintf(L"Failed to load kernel file! (%i)\r\n", status);
-        goto hang;
-    }
+    if (EFI_ERROR(status))
+        FatalError(L"\r\nFailed to load kernel file: %s", StatusString(status));
 
-    KernelEntry entry = (KernelEntry)LoadELFExecutable(kernel);
-    if (entry == 0) {
-        eprintf(L"Failed to load kernel!\r\n");
-        goto hang;
-    }
+    KernelEntry entry;
+    status = LoadELFExecutable(kernel, (UINT64*)&entry);
+    if (EFI_ERROR(status))
+        FatalError(L"\r\nFailed to load kernel: %s", StatusString(status));
 
     SYSTEM_TABLE->BootServices->FreePool(kernel);
-    printf(L"Kernel loaded!\r\n");
+    PRINT_OK();
 
     // Exit boot services and launch the kernel
-    printf(L"Launching the kernel . . .\r\n");
+    Println(L"Launching the kernel . . .");
 
     entry();
 
