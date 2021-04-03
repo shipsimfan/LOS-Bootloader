@@ -3,13 +3,15 @@
 #include <error.h>
 #include <file.h>
 #include <systemTable.h>
+#include <video.h>
 
 #define PRINT_OK()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     \
     SetColor(EFI_GREEN);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               \
     Println(L"OK");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     SetColor(EFI_LIGHTGRAY);
 
-typedef void (*KernelEntry)();
+typedef void (*KernelEntry)(GraphicsMode* graphicsInfo) __attribute__((sysv_abi));
+GraphicsMode graphicsMode;
 
 EFI_SYSTEM_TABLE* SYSTEM_TABLE;
 EFI_HANDLE IMAGE_HANDLE;
@@ -41,12 +43,18 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
     SYSTEM_TABLE->BootServices->FreePool(kernel);
     PRINT_OK();
 
+    // Get the graphics mode info
+    Print(L"Getting video mode information . . . ");
+    status = GetCurrentGraphicsInfo(&graphicsMode);
+    if (EFI_ERROR(status))
+        FatalError(L"\r\nFailed to get video mode information: %s", StatusString(status));
+    PRINT_OK();
+
     // Exit boot services and launch the kernel
     Println(L"Launching the kernel . . .");
 
-    entry();
+    entry(&graphicsMode);
 
-hang:
     while (1)
         asm volatile("hlt");
 }
