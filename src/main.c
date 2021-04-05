@@ -1,3 +1,4 @@
+#include <acpi.h>
 #include <console.h>
 #include <elf.h>
 #include <error.h>
@@ -11,7 +12,7 @@
     Println(L"OK");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
     SetColor(EFI_LIGHTGRAY);
 
-typedef void (*KernelEntry)(GraphicsMode* graphicsInfo, MemoryMap* memoryMap) __attribute__((sysv_abi));
+typedef void (*KernelEntry)(GraphicsMode* graphicsInfo, MemoryMap* memoryMap, void* rdsp) __attribute__((sysv_abi));
 GraphicsMode graphicsMode;
 MemoryMap memoryMap;
 
@@ -59,11 +60,19 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable) {
         FatalError(L"\r\nFailed to get memory map: %s", StatusString(status));
     PRINT_OK();
 
+    // Get the RDSP
+    Print(L"Getting RDSP . . . ");
+    void* rdsp;
+    status = GetRDSP(&rdsp);
+    if (EFI_ERROR(status))
+        FatalError(L"\r\nFailed to get RDSP: %s", StatusString(status));
+    PRINT_OK();
+
     // Exit boot services and launch the kernel
     Println(L"Launching the kernel . . .");
     systemTable->BootServices->ExitBootServices(imageHandle, memoryMap.key);
 
-    entry(&graphicsMode, &memoryMap);
+    entry(&graphicsMode, &memoryMap, rdsp);
 
     while (1)
         asm volatile("hlt");
