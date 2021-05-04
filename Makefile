@@ -17,11 +17,11 @@ LINK_FILE := ./elf_x86_64_efi.lds
 C_OBJ_FILES := $(C_SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 # PROGRAMS
-CC := x86_64-w64-mingw32-gcc
-CC_FLAGS := -ffreestanding -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c -g
+CC := clang
+CC_FLAGS := -ffreestanding -Iinclude -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol -c -g --target=x86_64-w64-mingw32
 
-LD := x86_64-w64-mingw32-gcc
-LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g
+LD := clang
+LD_FLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -g --target=x86_64-w64-mingw32
 
 # BASE RULES
 all: dirs $(BOOTLOADER)
